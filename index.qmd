@@ -321,9 +321,23 @@ As with scraping, it is important to be polite and not make unnecessary server c
 You should use a functional programming approach when reading in these files. 
 
 ----
+```{r}
+library(jsonlite)
 
-Read in JSON files from URLs here
+extract_show_urls <- function(file) {
+  data <- fromJSON(file)
+  sapply(data, function(item) item[["_links"]][["show"]][["href"]])
+}
 
+show_urls <- unlist(lapply(json_files, extract_show_urls))
+
+get_show_data <- function(url) {
+  fromJSON(url)
+}
+
+all_shows <- lapply(show_urls, get_show_data)
+sapply(all_shows, function(show) show$name)
+```
 ----
 
 Process the JSON files using a functional approach and construct an appropriate table for the combined data you've acquired during this step (no need to join the data with the full `whoverse` episode-level data). 
