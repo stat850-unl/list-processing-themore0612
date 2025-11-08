@@ -134,7 +134,6 @@ json_files <- c(
   "drwho-72724.json"
 )
 
-
 extract_episodes <- function(show_json) {
   map_df(show_json, function(ep) {
     tibble(
@@ -157,7 +156,6 @@ drwho_tables <- map(json_files, ~ {
 })
 
 names(drwho_tables) <- c("drwho210", "drwho766", "drwho72724")
-
 lapply(drwho_tables, head, 5)
 
 ```
@@ -169,11 +167,37 @@ Your plot must have appropriate labels and a title.
 
 ---
 
-code chunk here
+```{r}
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+
+all_episodes <- bind_rows(drwho_tables, .id = "series")
+all_episodes <- all_episodes %>%
+  mutate(series = factor(series, levels = c("drwho-210", "drwho-766", "drwho-72724")))
+
+all_episodes <- all_episodes %>%
+  arrange(series, season, episode_number) %>%
+  group_by(series, season) %>%
+  mutate(days_between = as.numeric(airdate - lag(airdate))) %>%
+  ungroup()
+
+ggplot(all_episodes %>% filter(!is.na(days_between)),
+       aes(x = episode_number, y = days_between, color = series)) +
+  geom_point() +
+  geom_line() +
+  facet_wrap(~ series + season, scales = "free_x") +
+  labs(
+    title = "Days Between Air Dates of Consecutive Doctor Who Episodes",
+    x = "Episode Number",
+    y = "Days Between Episodes",
+    color = "Series"
+  )
+```
 
 ---
 
-In 2-3 sentences, explain what conclusions you might draw from the data. What patterns do you notice? Are there data quality issues?
+The plot shows that episode spacing varies by series and season: older series (e.g., drwho-210) tend to have shorter, more consistent gaps between episodes, while newer series (drwho-766 and drwho-72724) exhibit longer and more irregular gaps, particularly around specials or season breaks. Large spikes in days_between indicate break/pauses or multi-part episodes. A minor data quality issue is the NA values for the first episode of each season, which are expected since there’s no prior episode to calculate a gap.
 
 # Timey-Wimey Series and Episodes
 
