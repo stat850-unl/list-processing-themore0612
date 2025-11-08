@@ -1,17 +1,14 @@
 ---
 title: "Lab: List Processing"
-author: "Your Name Here"
+author: "Zora Zhang"
 format: html
 number-sections: true
 number-depth: 2
 ---
-
 ::: callout
 You can see the purpose of this assignment as well as the skills and knowledge you should be using and acquiring, in the [Transparency in Learning and Teaching (TILT)](tilt.qmd) document in this repository. The TILT document also contains a checklist for self-reflection that will provide some guidance on how the assignment will be graded. 
 :::
-
 # Data Source
-
 JSON data files for this assignment were obtained from the TVMaze API for three different  Doctor Who series as well as two different spin-offs. 
 
 - Dr. Who [2023-2025](https://www.tvmaze.com/shows/72724/doctor-who)
@@ -22,32 +19,71 @@ JSON data files for this assignment were obtained from the TVMaze API for three 
 - [Torchwood: Web of Lies (2011)](https://www.tvmaze.com/shows/26694/torchwood-web-of-lies)
 
 # Warming Up
-
 For this portion of the assignment, only work with the canonical Dr. Who files (drwho2023.json, drwho2005.json, drwho1963.json). 
 
 ## Parse the file
-
 Add a code chunk that will read each of the JSON files in. 
 Store the data in a `drwhoYYYY` object, where `YYYY` is the first year the series  began to air. 
 How are the data objects stored?
+```{r}
+library(purrr)
+library(jsonlite)
 
+json_files <- c(
+  "~/Desktop/25- 26 Fall MS UNL/STAT850 Computing Tools/251104 Week11/list-processing-themore0612/drwho-210.json",
+  "~/Desktop/25- 26 Fall MS UNL/STAT850 Computing Tools/251104 Week11/list-processing-themore0612/drwho-766.json",
+  "~/Desktop/25- 26 Fall MS UNL/STAT850 Computing Tools/251104 Week11/list-processing-themore0612/drwho-72724.json"
+)
+
+drwho_list <- map(json_files, ~ read_json(.x))
+names(drwho_list) <- basename(json_files)
+str(drwho_list,1)
+head(drwho_list$`drwho-210.json`,1)
+```
 ---
 
 ## Examining List Data Structures
-
 Create a nested markdown list showing what variables are nested at each level of the JSON file. Include an 'episode' object that is a stand-in for a generic episode (e.g. don't create a list with all 700+ episodes in it, just show what a single episode has). Make sure you use proper markdown formatting to ensure that the lists are rendered properly when you compile your document.
 
 Hint: The `prettify()` function in the R package `jsonlite` will spit out a better-formatted version of a JSON file. 
-
+```{r}
+library(jsonlite)
+drwho210 <- read_json("drwho-210.json")
+prettify(toJSON(drwho210))
+```
 ----
-
-List here
+- episode
+  - id
+  - url
+  - name
+  - season
+  - number
+  - type
+  - airdate
+  - airtime
+  - airstamp
+  - runtime
+  - rating
+    - average
+  - image
+    - medium
+    - original
+  - summary
+  - _links
+    - self
+      - href
+    - show
+      - href
+      - name
 
 ----
 
 Is there any information stored in the list structure that you feel is redundant? If so, why?
 
-
+Yes. Some redundancy exists:
+    1. season and number – implied by the episode’s position in the season list.
+    2. url vs _links$self$href – both link to the episode.
+	3. _links$show$name – repeated in every episode if show info is stored at the top.
 
 ## Develop A Strategy
 
@@ -57,17 +93,28 @@ Sketch one or more rectangular data tables that look like your expected output. 
 
 ---
 
-Sketch goes here
-
+Columns for the table:
+- show
+- season
+- episode_number
+- title
+- airdate
+- runtime
+- rating
+- type
+- image (optional)
+- year (optional, extracted from airdate)
 ---
 
 What operations will you need to perform to get the data into a form matching your sketch? Make an ordered list of steps you need to take.
 
 ---
-
-1. ... fill me in
-2. ...
-3. ...
+1.	Read JSON files into R.
+2.	Inspect structure with str() or names().
+3.	Flatten nested fields (rating, image, _links) and convert single-item arrays to scalars.
+4.	Extract episode data: one row per episode with show, season, episode_number, title, airdate, runtime, type, rating.
+5.	Combine all files into one table.
+6.	Clean/format: convert dates, numeric types, handle missing values.
 
 ## Implement Your Strategy
 
@@ -75,6 +122,45 @@ Add a code chunk that will convert the JSON files into the table(s) you sketched
 Make sure that the resulting tables have the correct variable types (e.g., dates should not be stored as character variables).
 
 Print out the first 5 rows of each table that you create (but no more)!
+```{r}
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(lubridate)
+
+json_files <- c(
+  "drwho-210.json",
+  "drwho-766.json",
+  "drwho-72724.json"
+)
+
+
+extract_episodes <- function(show_json) {
+  map_df(show_json, function(ep) {
+    tibble(
+      show = ep$`_links`$show$name[[1]],
+      season = as.integer(ep$season[[1]]),
+      episode_number = as.integer(ep$number[[1]]),
+      title = ep$name[[1]],
+      airdate = as.Date(ep$airdate[[1]]),
+      runtime = as.integer(ep$runtime[[1]]),
+      rating = as.numeric(ep$rating$average[[1]]),
+      type = ep$type[[1]],
+      image = ep$image$medium[[1]]
+    )
+  })
+}
+
+drwho_tables <- map(json_files, ~ {
+  show_data <- read_json(.x)
+  extract_episodes(show_data)
+})
+
+names(drwho_tables) <- c("drwho210", "drwho766", "drwho72724")
+
+lapply(drwho_tables, head, 5)
+
+```
 
 ## Examining Episode Air Dates
 
