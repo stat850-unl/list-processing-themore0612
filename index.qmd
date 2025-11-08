@@ -207,8 +207,41 @@ In this section of the assignment, you will work with all of the provided JSON f
 Use a functional programming approach to read in all of the files and bind them together. 
 
 ----
+```{r}
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(lubridate)
 
-functional code goes here
+json_files <- list.files(
+  path = "~/Desktop/25- 26 Fall MS UNL/STAT850 Computing Tools/251104 Week11/list-processing-themore0612",
+  pattern = "*.json",
+  full.names = TRUE
+)
+
+extract_episodes <- function(file_path) {
+  show_data <- read_json(file_path)
+  map_df(show_data, function(ep) {
+    tibble(
+      show = ep$`_links`$show$name[[1]],
+      season = as.integer(ep$season[[1]]),
+      episode_number = as.integer(ep$number[[1]]),
+      title = ep$name[[1]],
+      airdate = as.Date(ep$airdate[[1]]),
+      runtime = as.integer(ep$runtime[[1]]),
+      rating = as.numeric(ep$rating$average[[1]]),
+      type = ep$type[[1]],
+      image = ep$image$medium[[1]]
+    )
+  })
+}
+
+all_files <- map_df(json_files, extract_episodes, .id = "series")
+
+all_files <- all_files %>%
+  mutate(series = factor(series))
+
+```
 
 ----
 
@@ -217,20 +250,69 @@ At the end of the chunk, your data should be in a reasonably tidy, rectangular f
 Call this rectangular table `whoverse`. 
 
 ----
-
+`
 Cleaning code goes here
+```{r}
 
+library(jsonlite)
+library(dplyr)
+library(purrr)
+library(lubridate)
+
+json_files <- list.files(
+  path = "~/Desktop/25- 26 Fall MS UNL/STAT850 Computing Tools/251104 Week11/list-processing-themore0612",
+  pattern = "*.json",
+  full.names = TRUE
+)
+
+extract_clean_episodes <- function(file_path) {
+  show_data <- read_json(file_path)
+  
+  map_df(show_data, function(ep) {
+    tibble(
+      show = ep$`_links`$show$name[[1]],
+      season = as.integer(ep$season[[1]]),
+      episode_number = as.integer(ep$number[[1]]),
+      title = ep$name[[1]],
+      airdate = as.Date(ep$airdate[[1]]),
+      runtime = as.integer(ep$runtime[[1]]),
+      rating = as.numeric(ep$rating$average[[1]]),
+      type = ep$type[[1]],
+      image = ep$image$medium[[1]]
+    )
+  })
+}
+
+whoverse <- map_df(json_files, extract_clean_episodes, .id = "series") %>%
+  mutate(
+    series = factor(series),
+    type = factor(type)
+  )
+
+
+head(whoverse, 5)
+#whoverse$airdate
+#whoverse$series
+#whoverse$season
+```
 ----
 
-
 ## Air Time
-
 Investigate the air time of the episodes relative to the air date, series, and season.
 It may help to know that the [watershed](https://en.wikipedia.org/wiki/Watershed_(broadcasting)) period in the UK is 9:00pm - 5:30am. 
 Content that is unsuitable for minors may only be shown during this window.
 What conclusions do you draw about the target audience for each show? 
 
 How can you explain any shows in the Dr. Who universe which do not have airtimes provided?
+
+Observations & Conclusions
+	1.	Target Audience:
+	    - Episodes airing before 9:00pm are generally aimed at family or younger audiences.
+        - Episodes airing during or after the watershed (9:00pm+) are likely intended for older teens or adults.
+        - Classic series (210) often aired earlier in the evening, while modern series sometimes push closer to the watershed, suggesting a slightly older audience for later episodes.
+        
+	2.	Missing Airtimes:
+        - Some older or special episodes may not have airtimes recorded, either because historical records are incomplete or because specials were released in non-standard formats.
 
 ## Another Layer of JSON
 
